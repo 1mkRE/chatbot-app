@@ -23,7 +23,7 @@ class App(CTk):
         self.model = "text-davinci-003"
         self.temperature = 0.5
         self.max_tokens = 1024
-        self.api_key = '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'
+        self.api_key = ''
         self.request_var = StringVar()
         self.voice_switch_status = StringVar()
         self.language = 'de'
