@@ -10,6 +10,7 @@ import os
 from PIL import Image
 from math import trunc
 from math import floor
+import authorization
 
 set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -23,7 +24,7 @@ class App(CTk):
         self.model = "text-davinci-003"
         self.temperature = 0.5
         self.max_tokens = 1024
-        self.api_key = ''
+        self.api_key = authorization.api_key
         self.request_var = StringVar()
         self.voice_switch_status = StringVar()
         self.language = 'de'
@@ -201,11 +202,11 @@ class App(CTk):
         playsound.playsound(file)
         os.remove(file)
 
-    def chatAI(self, model, request, temperatur, max_tokens, api_key):
+    def chatAI(self, model, request, temperature, max_tokens, api_key):
         try:
             if request != '':
-                response = openai.Completion.create(model=model, prompt=request, temperature=temperatur,
-                                                    max_tokens=max_tokens, api_key=api_key)
+                response = openai.Completion.create(model=model, prompt=request, temperature=temperature,
+                                                    max_tokens=max_tokens, api_key=api_key, top_p=0, logprobs=10)
                 answer = response.choices[0].text
                 self.textbox.insert(0.0, self.request_var.get() + '\n')
                 self.textbox.insert(0.0, '\nQuestion:\n')
