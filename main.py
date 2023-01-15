@@ -1,4 +1,5 @@
 from tkinter import *
+from tkinter import messagebox
 from customtkinter import *
 import openai
 import pyperclip
@@ -8,13 +9,61 @@ from gtts import gTTS
 import playsound
 import os
 from PIL import Image
-from math import trunc
 from math import floor
 import authorization
+from threading import Thread
 
 set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 set_widget_scaling(0.8)
+
+
+class WindowAPIKey(CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.apiKeyVar = StringVar()
+        self.api_key_set = ''
+
+        # configure window
+        self.title("API Key Settings")
+        self.geometry(f"{420}x{200}")
+        self.iconbitmap(default='LogoTransparent.ico')
+
+        self.logo_label = CTkLabel(self, text="Input your openai API Key below:", font=CTkFont(size=12, weight="bold"))
+        self.logo_label.pack(padx=10, pady=10)
+        self.entry = CTkEntry(self, textvariable=self.apiKeyVar, placeholder_text="Please Enter your openai API Key", placeholder_text_color="white", width=400)
+        self.entry.pack(padx=10)
+        self.status_label = CTkLabel(self, text='')
+        self.status_label.pack(padx=10, pady=5)
+        self.save_btn = CTkButton(self, text="Save", command=self.btn_apikey_event)
+        self.save_btn.pack(padx=10)
+        self.close_btn = CTkButton(self, text="Close", command=self.destroy)
+        self.close_btn.pack(padx=10, pady=10)
+
+    def setAPIKey(self):
+        ev = authorization.EnvivarSettings('OPENAI_API_KEY')
+        status = ev.setEnvVar(self.api_key_set)
+        if status:
+            self.lbl_text(self.status_label, 'API Key successfully saved.\nPlease restart your PC.')
+            self.entry.delete(0, 'end')
+        else:
+            self.lbl_text(self.status_label, 'Save API key unsuccessfully!')
+
+    def btn_apikey_event(self):
+        self.api_key_set = self.apiKeyVar.get()
+        self.lbl_text(self.status_label, 'Saving API key in process ......')
+        self.update()
+        tAPI = Thread(target=self.setAPIKey())
+        tAPI.start()
+
+    def lbl_text(self, lblwidget, txt):
+        tmp_lblwidget = lblwidget
+        tmp_lblwidget.configure(text=txt)
+
+
+
+
 
 
 class App(CTk):
@@ -24,15 +73,20 @@ class App(CTk):
         self.model = "text-davinci-003"
         self.temperature = 0.5
         self.max_tokens = 1024
-        self.api_key = authorization.api_key
+        self.api_key = ''
         self.request_var = StringVar()
         self.voice_switch_status = StringVar()
         self.language = 'de'
         self.sound = False
+        self.api_key_set = ''
 
         # configure window
         self.title("Desktop AI ChatBot")
-        self.geometry(f"{1100}x{580}")
+        width = self.winfo_screenwidth()
+        height = self.winfo_screenheight()
+        self.geometry(f"{width}x{height}")
+        self.iconbitmap(default='LogoTransparent.ico')
+        #self.attributes('-fullscreen', True)
 
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
@@ -65,24 +119,18 @@ class App(CTk):
         self.exit_btn = CTkButton(self.sidebar_frame, text="Exit", command=self.destroy)
         self.exit_btn.grid(row=2, column=0, padx=10, pady=10)
 
+        self.api_btn = CTkButton(self.sidebar_frame, text="API Key Setting", command=self.btn_apikey_event)
+        self.api_btn.grid(row=3, column=0, padx=10, pady=10)
+
         self.language_mode_label = CTkLabel(self.sidebar_frame, text="Voice Language:", anchor="w")
         self.language_mode_label.grid(row=9, column=0, padx=10, pady=(0, 0))
+
+        self.mode_label = CTkLabel(self.sidebar_frame, text="Voice Language:", anchor="w")
+        self.mode_label.grid(row=9, column=0, padx=10, pady=(0, 0))
 
         self.language_mode_option_menu = CTkOptionMenu(self.sidebar_frame, values=["de", "en", "cs", "pl", "sk"],
                                                        command=self.change_language_mode_event)
         self.language_mode_option_menu.grid(row=10, column=0, padx=10, pady=(0, 0))
-
-        self.model_label = CTkLabel(self.sidebar_frame, text="Model:", anchor="w")
-        self.model_label.grid(row=9, column=1, padx=10, pady=(0, 0))
-
-        self.model_option_menu = CTkOptionMenu(self.sidebar_frame,
-                                               values=["text-davinci-003", "text-curie-001", "text-babbage-001",
-                                                       "text-ada-001", "code-davinci-002", "code-cushman-001"],
-                                               command=self.change_model_event)
-        self.model_option_menu.grid(row=10, column=1, padx=10, pady=(0, 0))
-
-        self.mode_label = CTkLabel(self.sidebar_frame, text="Voice Language:", anchor="w")
-        self.mode_label.grid(row=9, column=0, padx=10, pady=(0, 0))
 
         self.mode_option_menu = CTkOptionMenu(self.sidebar_frame, values=["de", "en", "cs", "pl", "sk"],
                                               command=self.change_language_mode_event)
@@ -98,7 +146,7 @@ class App(CTk):
         self.scaling_label = CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
         self.scaling_label.grid(row=5, column=1, padx=10, pady=(0, 0))
 
-        self.scaling_option_menu = CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
+        self.scaling_option_menu = CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%"],
                                                  command=self.change_scaling_event)
         self.scaling_option_menu.grid(row=6, column=1, padx=10, pady=(0, 0))
 
@@ -106,22 +154,43 @@ class App(CTk):
                                       variable=self.voice_switch_status, onvalue="On", offvalue="Off")
         self.voice_switch.grid(row=11, column=0, padx=10, pady=(20, 20))
 
+        self.api_label = CTkLabel(self.sidebar_frame, text="API Key: missing", anchor="w")
+        self.api_label.grid(row=3, column=1, padx=10, pady=(0, 0))
+
+        self.screen_label = CTkLabel(self.sidebar_frame, text="Screen", anchor="w")
+        self.screen_label.grid(row=9, column=1, padx=10, pady=(0, 0))
+
+        self.screen_mode = CTkOptionMenu(self.sidebar_frame, values=["Normal", "Full"],
+                                                         command=self.change_screen_mode)
+        self.screen_mode.grid(row=10, column=1, padx=10, pady=(0, 0))
+
         self.slider_lenght_label = CTkLabel(self.sidebar_frame, text="Max. tokens: ", anchor="w",
                                             font=CTkFont(size=12, weight="bold"))
-        self.slider_lenght_label.grid(row=13, column=0, padx=10, pady=(0, 0))
+        self.slider_lenght_label.grid(row=11, column=0, padx=10, pady=(0, 0))
 
         self.slider_lenght = CTkSlider(self.sidebar_frame, from_=0, to=4000, number_of_steps=4000,
                                        command=self.lenght_slider)
-        self.slider_lenght.grid(row=13, column=1, padx=10, pady=(20, 20), sticky="ew")
+        self.slider_lenght.grid(row=11, column=1, padx=10, pady=(20, 20), sticky="ew")
 
         self.slider_temp_label = CTkLabel(self.sidebar_frame, text="Temperature: ", anchor="w",
                                           font=CTkFont(size=12, weight="bold"))
-        self.slider_temp_label.grid(row=14, column=0, padx=10, pady=(0, 0))
+        self.slider_temp_label.grid(row=12, column=0, padx=10, pady=(0, 0))
 
         self.slider_temp = CTkSlider(self.sidebar_frame, from_=0, to=1000, number_of_steps=1000,
                                      command=self.temp_slider)
-        self.slider_temp.grid(row=14, column=1, padx=10, pady=(20, 20), sticky="ew")
+        self.slider_temp.grid(row=12, column=1, padx=10, pady=(20, 20), sticky="ew")
         self.slider_temp.configure(command=self.temp_slider)
+
+        self.model_label = CTkLabel(self.sidebar_frame, text="Model:", anchor="w")
+        self.model_label.grid(row=13, column=0, padx=10, pady=(0, 0))
+
+        self.model_option_menu = CTkOptionMenu(self.sidebar_frame,
+                                               values=["text-davinci-003", "text-curie-001", "text-babbage-001",
+                                                       "text-ada-001", "code-davinci-002", "code-cushman-001"],
+                                               command=self.change_model_event)
+        self.model_option_menu.grid(row=14, column=0, padx=10, pady=(0, 10))
+
+
 
         # create main entry and button
         self.entry = CTkEntry(self, textvariable=self.request_var, placeholder_text="Please Enter your question")
@@ -139,6 +208,26 @@ class App(CTk):
         self.init_slider(self.max_tokens, self.slider_lenght, self.slider_lenght_label, 1, 'Max. tokens: ')
         self.init_slider(self.temperature, self.slider_temp, self.slider_temp_label, 1000, 'Temperature: ')
 
+        self.loadAPIKey()
+
+    def scree_update(self, full):
+        self.attributes('-fullscreen', full)
+        self.update()
+
+
+    def loadAPIKey(self):
+        ev = authorization.EnvivarSettings('OPENAI_API_KEY')
+        status, val = ev.getEnvVar()
+        if status:
+            self.api_key = val
+            self.api_label.configure(text='API Key: OK')
+        else:
+            self.api_label.configure(text='API Key: missing')
+
+    def btn_apikey_event(self):
+        self.apiKey_window = WindowAPIKey(self)
+        self.apiKey_window.grab_set()
+
     def change_model_event(self, new_model_mode: str):
         self.model = new_model_mode
 
@@ -147,6 +236,14 @@ class App(CTk):
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         set_appearance_mode(new_appearance_mode)
+
+    def change_screen_mode(self, new_screen_mode: str):
+        if new_screen_mode == 'Normal':
+            self.scree_update(False)
+        elif new_screen_mode == 'Full':
+            self.scree_update(True)
+        else:
+            pass
 
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
