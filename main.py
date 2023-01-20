@@ -6,7 +6,7 @@ import pyperclip
 import time
 from tkinter import StringVar
 from gtts import gTTS
-import playsound
+import playsound   # playsound version 1.2.2
 import os
 from PIL import Image
 from math import floor
@@ -142,7 +142,7 @@ class App(CTk):
         self.appearance_mode_option_menu = CTkOptionMenu(self.sidebar_frame, values=["Dark", "System"],
                                                          command=self.change_appearance_mode_event)
         self.appearance_mode_option_menu.grid(row=6, column=0, padx=10, pady=(0, 0))
-##
+
         self.voice_label = CTkLabel(self.sidebar_frame, text="Voice ON/OFF:", anchor="w")
         self.voice_label.grid(row=13, column=1, padx=10, pady=(0, 0))
 
