@@ -142,6 +142,9 @@ class App(CTk):
         self.appearance_mode_option_menu = CTkOptionMenu(self.sidebar_frame, values=["Dark", "System"],
                                                          command=self.change_appearance_mode_event)
         self.appearance_mode_option_menu.grid(row=6, column=0, padx=10, pady=(0, 0))
+##
+        self.voice_label = CTkLabel(self.sidebar_frame, text="Voice ON/OFF:", anchor="w")
+        self.voice_label.grid(row=13, column=1, padx=10, pady=(0, 0))
 
         self.scaling_label = CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
         self.scaling_label.grid(row=5, column=1, padx=10, pady=(0, 0))
@@ -152,7 +155,7 @@ class App(CTk):
 
         self.voice_switch = CTkSwitch(self.sidebar_frame, text="Voice", command=self.voice_select,
                                       variable=self.voice_switch_status, onvalue="On", offvalue="Off")
-        self.voice_switch.grid(row=11, column=0, padx=10, pady=(20, 20))
+        self.voice_switch.grid(row=14, column=1, padx=10, pady=(20, 20))
 
         self.api_label = CTkLabel(self.sidebar_frame, text="API Key: missing", anchor="w")
         self.api_label.grid(row=3, column=1, padx=10, pady=(0, 0))
