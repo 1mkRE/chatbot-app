@@ -17,7 +17,7 @@ class EnvivarSettings:
         try:
             if os.name == 'nt':
                 exportNT = f'setx {self.envivarName} "{val}"'
-                subprocess.Popen(exportNT, shell=False).wait()
+                subprocess.Popen(exportNT, shell=False, creationflags=subprocess.CREATE_NO_WINDOW).wait()
                 return True
             else:
                 return False
